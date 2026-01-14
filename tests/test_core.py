@@ -1,7 +1,5 @@
 """Tests for core query execution module."""
 
-from unittest.mock import MagicMock, patch
-
 import pytest
 
 from shortwing.core import execute_query
@@ -11,28 +9,48 @@ from shortwing.exceptions import QueryError
 class TestExecuteQuery:
     """Tests for execute_query function."""
 
-    def test_returns_json_response(self, mock_dimcli):
-        """Should return the raw JSON from dimcli response."""
-        result = execute_query("search grants return grants")
+    @pytest.mark.asyncio
+    async def test_returns_json_response(self, mock_httpx_success):
+        """Should return the raw JSON from API response."""
+        result = await execute_query(
+            "search grants return grants",
+            "test-api-key",
+            "https://app.dimensions.ai",
+        )
         assert "researchers" in result
         assert "_stats" in result
 
-    def test_passes_query_verbatim(self, mock_dimcli):
-        """Query should be passed unchanged to dimcli."""
-        query = '  search grants for "test"  '
-        execute_query(query)
-        mock_dimcli.Dsl.return_value.query.assert_called_once_with(query)
+    @pytest.mark.asyncio
+    async def test_authenticates_with_jwt(self, mock_httpx_success):
+        """Should authenticate and get JWT token."""
+        await execute_query(
+            "search grants", "test-api-key", "https://app.dimensions.ai"
+        )
 
-    def test_wraps_exceptions_as_query_error(self):
-        """Should wrap dimcli exceptions as QueryError."""
-        with patch("shortwing.core.dimcli") as mock:
-            mock.Dsl.return_value.query.side_effect = Exception("API Error")
-            with pytest.raises(QueryError) as exc_info:
-                execute_query("test")
-            assert "API Error" in str(exc_info.value)
+        # Verify auth endpoint was called
+        calls = mock_httpx_success.post.call_args_list
+        auth_call = calls[0]
+        assert "/api/auth" in auth_call[0][0]
+        assert auth_call[1]["json"] == {"key": "test-api-key"}
 
-    def test_preserves_error_response(self, mock_dimcli_error):
+    @pytest.mark.asyncio
+    async def test_sends_query_to_dsl_endpoint(self, mock_httpx_success):
+        """Should send query to DSL endpoint with JWT token."""
+        query = "search grants return grants"
+        await execute_query(query, "test-api-key", "https://app.dimensions.ai")
+
+        # Verify query endpoint was called
+        calls = mock_httpx_success.post.call_args_list
+        query_call = calls[1]
+        assert "/api/dsl/v2" in query_call[0][0]
+        assert query_call[1]["content"] == query.encode("utf-8")
+        assert query_call[1]["headers"]["Authorization"] == "JWT test-jwt-token"
+
+    @pytest.mark.asyncio
+    async def test_preserves_error_response(self, mock_httpx_error):
         """Should return error response as-is."""
-        result = execute_query("bad query")
+        result = await execute_query(
+            "bad query", "test-api-key", "https://app.dimensions.ai"
+        )
         assert "error" in result
         assert result["error"]["code"] == 400

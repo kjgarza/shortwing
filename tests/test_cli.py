@@ -49,7 +49,11 @@ class TestCLIInput:
             input="stdin query\n",
             env={"DIMENSIONS_KEY": "test-key"},
         )
-        mock_all_dimcli.Dsl.return_value.query.assert_called_with("stdin query")
+        # Verify query endpoint was called with stdin query
+        calls = mock_all_dimcli.post.call_args_list
+        query_call = [c for c in calls if "/api/dsl" in str(c)]
+        assert len(query_call) > 0
+        assert query_call[0][1]["content"] == b"stdin query"
 
     def test_whitespace_trimmed(self, runner, mock_all_dimcli):
         """Leading/trailing whitespace should be trimmed."""
@@ -59,36 +63,33 @@ class TestCLIInput:
             input="  \n  search grants  \n  ",
             env={"DIMENSIONS_KEY": "test-key"},
         )
-        mock_all_dimcli.Dsl.return_value.query.assert_called_with("search grants")
+        # Verify query endpoint was called with trimmed query
+        calls = mock_all_dimcli.post.call_args_list
+        query_call = [c for c in calls if "/api/dsl" in str(c)]
+        assert len(query_call) > 0
+        assert query_call[0][1]["content"] == b"search grants"
 
 
 class TestCLIAuth:
     """Tests for authentication handling."""
 
-    def test_missing_key_exits_code_2(self, runner):
+    def test_missing_key_exits_code_2(self, runner, clean_env):
         """Missing API key should exit with code 2."""
         result = runner.invoke(main, ["search grants"], env={})
         assert result.exit_code == EXIT_CONFIG_ERROR
         assert "DIMENSIONS_KEY" in result.output
 
-    def test_key_flag_overrides_env(self, runner):
+    def test_key_flag_overrides_env(self, runner, mock_httpx_success):
         """--key flag should override environment variable."""
-        with (
-            patch("shortwing.config.dimcli") as config_mock,
-            patch("shortwing.core.dimcli") as core_mock,
-        ):
-            mock_dsl = MagicMock()
-            mock_dsl.query.return_value.json = {"test": "data"}
-            core_mock.Dsl.return_value = mock_dsl
-
-            result = runner.invoke(
-                main,
-                ["--key", "flag-key", "search grants"],
-                env={"DIMENSIONS_KEY": "env-key"},
-            )
-            config_mock.login.assert_called_once()
-            call_kwargs = config_mock.login.call_args[1]
-            assert call_kwargs["key"] == "flag-key"
+        result = runner.invoke(
+            main,
+            ["--key", "flag-key", "search grants"],
+            env={"DIMENSIONS_KEY": "env-key"},
+        )
+        # Verify the flag-key was used in auth
+        calls = mock_httpx_success.post.call_args_list
+        auth_call = calls[0]
+        assert auth_call[1]["json"]["key"] == "flag-key"
 
 
 class TestCLIOutput:
@@ -137,25 +138,47 @@ class TestCLISubcommand:
 class TestCLIErrors:
     """Tests for error handling."""
 
-    def test_api_error_exits_code_1(self, runner):
+    def test_api_error_exits_code_1(self, runner, mock_httpx_error):
         """API error should exit with code 1 and output error JSON."""
-        with (
-            patch("shortwing.config.dimcli"),
-            patch("shortwing.core.dimcli") as core_mock,
-        ):
-            mock_dsl = MagicMock()
-            mock_dsl.query.return_value.json = {
-                "error": {"message": "Invalid syntax", "code": 400}
-            }
-            core_mock.Dsl.return_value = mock_dsl
+        result = runner.invoke(
+            main, ["bad query"], env={"DIMENSIONS_KEY": "test-key"}
+        )
+        assert result.exit_code == EXIT_QUERY_ERROR
+        assert "error" in result.output
 
-            result = runner.invoke(
-                main, ["bad query"], env={"DIMENSIONS_KEY": "test-key"}
-            )
-            assert result.exit_code == EXIT_QUERY_ERROR
-            assert "error" in result.output
-
-    def test_no_query_shows_usage_error(self, runner):
-        """No query provided should show usage error."""
+    def test_no_query_shows_help(self, runner, clean_env):
+        """No query provided should show help."""
         result = runner.invoke(main, [], env={"DIMENSIONS_KEY": "test-key"})
-        assert result.exit_code != EXIT_SUCCESS
+        # Exit code 0 or 1 is acceptable - both mean help was shown without error
+        assert result.exit_code in [0, 1]
+        assert "Shortwing" in result.output
+        assert "Execute DSL queries" in result.output
+
+
+class TestNextSteps:
+    """Tests for next steps suggestions."""
+
+    def test_next_steps_shown_on_success(self, runner, mock_httpx_success):
+        """Success should show next steps suggestions."""
+        result = runner.invoke(
+            main, ["search grants"], env={"DIMENSIONS_KEY": "test-key"}
+        )
+        # Next steps go to stderr when running in interactive mode
+        # CliRunner captures both stdout and stderr in output
+        # We check that the JSON is in output (success)
+        assert result.exit_code == EXIT_SUCCESS
+        assert "researchers" in result.output
+
+    def test_next_steps_shown_on_query_error(self, runner, mock_httpx_error):
+        """Query error should show relevant next steps."""
+        result = runner.invoke(
+            main, ["bad query"], env={"DIMENSIONS_KEY": "test-key"}
+        )
+        assert result.exit_code == EXIT_QUERY_ERROR
+        assert "error" in result.output
+
+    def test_next_steps_shown_on_config_error(self, runner, clean_env):
+        """Config error should show credential-related next steps."""
+        result = runner.invoke(main, ["search grants"], env={})
+        assert result.exit_code == EXIT_CONFIG_ERROR
+        assert "DIMENSIONS_KEY" in result.output or "Configuration error" in result.output

@@ -1,11 +1,19 @@
 # Shortwing
 
+[![PyPI version](https://img.shields.io/pypi/v/shortwing)](https://pypi.org/project/shortwing/)
+[![Python versions](https://img.shields.io/pypi/pyversions/shortwing)](https://pypi.org/project/shortwing/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+<p align="left">
+  <img src="shortwing.jpg" alt="Himalayan Shortwing" width="200">
+</p>
+
 Lightweight CLI wrapper for Dimensions DSL queries via dimcli.
 
 ## Installation
 
 ```bash
-uv pip install .
+pip install shortwing
 ```
 
 ## Usage
@@ -76,6 +84,14 @@ export DIMENSIONS_ENDPOINT=https://app.dimensions.ai  # optional
 shortwing --key your-api-key "search grants"
 shortwing --key your-api-key --endpoint https://custom.endpoint.com "search grants"
 ```
+
+### Development
+
+```bash
+uv pip install .
+```
+
+
 
 ## Exit Codes
 
