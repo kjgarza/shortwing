@@ -32,7 +32,7 @@ class TestResolveCredentials:
         """Should raise ConfigurationError when key is missing."""
         with pytest.raises(ConfigurationError) as exc_info:
             resolve_credentials()
-        assert "dsl.ini" in str(exc_info.value)
+        assert "DIMENSIONS_KEY" in str(exc_info.value)
 
     def test_reads_from_dsl_ini(self, clean_env, tmp_path, monkeypatch):
         """Should read credentials from dsl.ini file."""
@@ -103,9 +103,8 @@ key=test-key
 class TestReadDslIni:
     """Tests for read_dsl_ini function."""
 
-    def test_returns_none_when_no_file(self, tmp_path, monkeypatch):
+    def test_returns_none_when_no_file(self, clean_env):
         """Should return None, None when no dsl.ini exists."""
-        monkeypatch.chdir(tmp_path)
         key, endpoint = read_dsl_ini()
         assert key is None
         assert endpoint is None

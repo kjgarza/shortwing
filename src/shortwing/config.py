@@ -4,11 +4,9 @@ import configparser
 import os
 from typing import Optional
 
-import dimcli
-
 from shortwing.exceptions import ConfigurationError
 
-DEFAULT_ENDPOINT = "https://app.dimensions.ai/api/dsl/v2"
+DEFAULT_ENDPOINT = "https://app.dimensions.ai"
 USER_CONFIG_FILE_PATH = os.path.expanduser("~/.dimensions/dsl.ini")
 
 
@@ -104,8 +102,3 @@ def resolve_credentials(
         )
 
     return api_key, api_endpoint
-
-
-def initialize_client(key: str, endpoint: str) -> None:
-    """Initialize dimcli with credentials."""
-    dimcli.login(key=key, endpoint=endpoint)

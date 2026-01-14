@@ -1,13 +1,14 @@
 """Shortwing CLI - Click command definitions."""
 
+import asyncio
 import sys
 from typing import Optional
 
 import click
 
 from shortwing import __version__
-from shortwing.config import initialize_client, resolve_credentials
-from shortwing.core import execute_query
+from shortwing.config import resolve_credentials
+from shortwing.core import close_client, execute_query
 from shortwing.exceptions import (
     EXIT_CONFIG_ERROR,
     EXIT_QUERY_ERROR,
@@ -75,7 +76,47 @@ def read_query(
     return None
 
 
-def run_query(
+def show_next_steps(exit_code: int, compact: bool) -> None:
+    """
+    Display contextual next steps to stderr after query execution.
+
+    Only shows suggestions in interactive mode (not when piping output).
+
+    Args:
+        exit_code: The exit code (0=success, 1=query error, 2=config error)
+        compact: Whether compact output mode was used
+    """
+    # Don't show suggestions if output is being piped
+    if not sys.stdout.isatty():
+        return
+
+    suggestions = []
+
+    if exit_code == EXIT_SUCCESS:
+        suggestions.append("\nNext steps:")
+        if not compact:
+            suggestions.append("  • Try --compact for single-line JSON")
+        suggestions.append("  • Pipe to jq: shortwing '...' | jq '.field'")
+        suggestions.append("  • Save results: shortwing '...' > output.json")
+        suggestions.append("  • Run shortwing --help for more options")
+
+    elif exit_code == EXIT_QUERY_ERROR:
+        suggestions.append("\nQuery failed. Try:")
+        suggestions.append("  • Check DSL syntax at dimensions.ai/dsl")
+        suggestions.append("  • Verify query structure")
+        suggestions.append("  • Run shortwing --help for examples")
+
+    elif exit_code == EXIT_CONFIG_ERROR:
+        suggestions.append("\nConfiguration error. Try:")
+        suggestions.append("  • Set API key: export DIMENSIONS_KEY=your-key")
+        suggestions.append("  • Or use --key flag: shortwing --key KEY 'query'")
+        suggestions.append("  • Check ~/.dimensions/dsl.ini configuration")
+
+    if suggestions:
+        click.echo("\n".join(suggestions), err=True)
+
+
+async def run_query_async(
     query_arg: Optional[str],
     key: Optional[str],
     endpoint: Optional[str],
@@ -84,7 +125,7 @@ def run_query(
     pretty: bool,
     ctx: Optional[click.Context] = None,
 ) -> None:
-    """Core query execution logic shared by commands."""
+    """Async core query execution logic shared by commands."""
     try:
         # Resolve credentials
         api_key, api_endpoint = resolve_credentials(key, endpoint, instance)
@@ -92,21 +133,24 @@ def run_query(
         # Read query
         query = read_query(query_arg, ctx)
         if not query:
-            raise click.UsageError(
-                "No query provided. Pipe via stdin or pass as argument."
-            )
+            # Show help instead of error
+            if ctx:
+                click.echo(ctx.get_help())
+                ctx.exit(0)
+            else:
+                raise click.UsageError(
+                    "No query provided. Pipe via stdin or pass as argument."
+                )
 
-        # Initialize dimcli
-        initialize_client(api_key, api_endpoint)
-
-        # Execute query
-        result = execute_query(query)
+        # Execute query (async HTTP call)
+        result = await execute_query(query, api_key, api_endpoint)
 
         # Check for API error in response
         if "error" in result:
             # Output the error JSON and exit with code 1
             output = format_json(result, compact=compact)
             click.echo(output)
+            show_next_steps(EXIT_QUERY_ERROR, compact)
             sys.exit(EXIT_QUERY_ERROR)
 
         # Format and output
@@ -114,19 +158,31 @@ def run_query(
         use_compact = compact and not pretty
         output = format_json(result, compact=use_compact)
         click.echo(output)
+        show_next_steps(EXIT_SUCCESS, use_compact)
         sys.exit(EXIT_SUCCESS)
 
     except ConfigurationError as e:
         click.echo(str(e), err=True)
+        show_next_steps(EXIT_CONFIG_ERROR, False)
         sys.exit(EXIT_CONFIG_ERROR)
     except ShortwingError as e:
         click.echo(str(e), err=True)
+        show_next_steps(EXIT_QUERY_ERROR, False)
         sys.exit(e.exit_code)
     except click.UsageError:
         raise  # Let click handle usage errors
     except Exception as e:
         click.echo(f"Unexpected error: {e}", err=True)
+        show_next_steps(EXIT_QUERY_ERROR, False)
         sys.exit(EXIT_QUERY_ERROR)
+    finally:
+        # Clean up HTTP client
+        await close_client()
+
+
+def run_query(*args, **kwargs):
+    """Sync wrapper for run_query_async."""
+    asyncio.run(run_query_async(*args, **kwargs))
 
 
 # Shared options decorator
@@ -183,6 +239,15 @@ def main(ctx, key, endpoint, instance, compact, pretty):
     """
     ctx.ensure_object(dict)
     if ctx.invoked_subcommand is None:
+        # Check if a query will be available
+        has_query_from_args = ctx.obj.get("query_from_args")
+
+        # If no query from args, show help instead of error
+        if not has_query_from_args and sys.stdin.isatty():
+            click.echo(ctx.get_help())
+            ctx.exit(0)
+
+        # Run query - it will handle errors appropriately
         run_query(None, key, endpoint, instance, compact, pretty, ctx)
 
 
@@ -196,6 +261,13 @@ def query_cmd(query, key, endpoint, instance, compact, pretty):
     Query can be provided as argument or piped via stdin.
     Stdin takes precedence if both are provided.
     """
+    # If no query arg and no stdin, show help
+    if not query and sys.stdin.isatty():
+        ctx = click.get_current_context()
+        click.echo(ctx.get_help())
+        ctx.exit(0)
+
+    # Run query - it will handle errors appropriately
     run_query(query, key, endpoint, instance, compact, pretty)
 
 
