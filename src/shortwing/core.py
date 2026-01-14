@@ -4,7 +4,7 @@ from typing import Any
 
 import dimcli
 
-from kestrel.exceptions import QueryError
+from shortwing.exceptions import QueryError
 
 
 def execute_query(query: str) -> dict[str, Any]:

@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kestrel.core import execute_query
-from kestrel.exceptions import QueryError
+from shortwing.core import execute_query
+from shortwing.exceptions import QueryError
 
 
 class TestExecuteQuery:
@@ -25,7 +25,7 @@ class TestExecuteQuery:
 
     def test_wraps_exceptions_as_query_error(self):
         """Should wrap dimcli exceptions as QueryError."""
-        with patch("kestrel.core.dimcli") as mock:
+        with patch("shortwing.core.dimcli") as mock:
             mock.Dsl.return_value.query.side_effect = Exception("API Error")
             with pytest.raises(QueryError) as exc_info:
                 execute_query("test")

@@ -1,4 +1,4 @@
-# Kestrel
+# Shortwing
 
 Lightweight CLI wrapper for Dimensions DSL queries via dimcli.
 
@@ -12,19 +12,19 @@ uv pip install .
 
 ```bash
 # Query as argument
-kestrel "search grants for \"malaria\" return researchers"
+shortwing "search grants for \"malaria\" return researchers"
 
 # Query from stdin
-echo 'search grants for "malaria"' | kestrel
+echo 'search grants for "malaria"' | shortwing
 
 # With subcommand
-kestrel query "search grants return grants"
+shortwing query "search grants return grants"
 
 # Compact JSON output
-kestrel --compact "search grants"
+shortwing --compact "search grants"
 
 # Use a specific instance from dsl.ini
-kestrel --instance test "search grants"
+shortwing --instance test "search grants"
 ```
 
 ## Configuration
@@ -37,7 +37,7 @@ Credentials are loaded in the following order of priority:
 
 ### Using dsl.ini (Recommended)
 
-Kestrel uses the same `dsl.ini` configuration file as dimcli. Create the file at `~/.dimensions/dsl.ini`:
+Shortwing uses the same `dsl.ini` configuration file as dimcli. Create the file at `~/.dimensions/dsl.ini`:
 
 ```ini
 [instance.live]
@@ -60,7 +60,7 @@ key=your-test-key
 ```
 
 ```bash
-kestrel --instance test "search grants"
+shortwing --instance test "search grants"
 ```
 
 ### Using Environment Variables
@@ -73,8 +73,8 @@ export DIMENSIONS_ENDPOINT=https://app.dimensions.ai  # optional
 ### Using CLI Flags
 
 ```bash
-kestrel --key your-api-key "search grants"
-kestrel --key your-api-key --endpoint https://custom.endpoint.com "search grants"
+shortwing --key your-api-key "search grants"
+shortwing --key your-api-key --endpoint https://custom.endpoint.com "search grants"
 ```
 
 ## Exit Codes

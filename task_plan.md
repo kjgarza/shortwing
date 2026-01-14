@@ -1,19 +1,19 @@
-Below is a **developer-ready specification** for **Kestrel**, compiled from our full design conversation. This is written so an engineer can immediately begin implementation with minimal ambiguity.
+Below is a **developer-ready specification** for **Shortwing**, compiled from our full design conversation. This is written so an engineer can immediately begin implementation with minimal ambiguity.
 
 ---
 
-# Kestrel CLI – Developer Specification
+# Shortwing CLI – Developer Specification
 
 ## 1. Overview
 
-**Kestrel** is a lightweight command-line wrapper around the Python **`dimcli`** package.
+**Shortwing** is a lightweight command-line wrapper around the Python **`dimcli`** package.
 Its goal is to preserve the *input ergonomics of the existing `dimcli` CLI* while providing:
 
 * Cleaner, predictable behavior
 * Direct execution via `dimcli.Dsl().query(...)`
 * Raw JSON output suitable for automation and pipelines
 
-Kestrel is intentionally minimal and script-friendly.
+Shortwing is intentionally minimal and script-friendly.
 
 ---
 
@@ -41,25 +41,25 @@ Kestrel is intentionally minimal and script-friendly.
 ### Executable
 
 ```bash
-kestrel
+shortwing
 ```
 
 ### Supported Invocation Forms
 
 ```bash
-kestrel "search grants for \"malaria\" return researchers"
+shortwing "search grants for \"malaria\" return researchers"
 ```
 
 ```bash
-echo 'search grants for "malaria" return researchers' | kestrel
+echo 'search grants for "malaria" return researchers' | shortwing
 ```
 
 ```bash
-kestrel query "search grants for \"malaria\" return researchers"
+shortwing query "search grants for \"malaria\" return researchers"
 ```
 
 ```bash
-echo 'search grants for "malaria"' | kestrel query --compact
+echo 'search grants for "malaria"' | shortwing query --compact
 ```
 
 ---
@@ -106,7 +106,7 @@ Dsl().query(query_string)
 * CLI flags override environment variables
 
 ```bash
-kestrel --key abc --endpoint https://app.dimensions.ai
+shortwing --key abc --endpoint https://app.dimensions.ai
 ```
 
 ### Missing Credentials
@@ -124,13 +124,13 @@ kestrel --key abc --endpoint https://app.dimensions.ai
 ### Root Command
 
 ```bash
-kestrel [OPTIONS] [QUERY]
+shortwing [OPTIONS] [QUERY]
 ```
 
 ### Subcommand
 
 ```bash
-kestrel query [OPTIONS] [QUERY]
+shortwing query [OPTIONS] [QUERY]
 ```
 
 * `query` is the only subcommand in v1
@@ -166,7 +166,7 @@ kestrel query [OPTIONS] [QUERY]
 ### Compact Mode
 
 ```bash
-kestrel --compact
+shortwing --compact
 ```
 
 * Single-line JSON (no extra whitespace)
@@ -282,7 +282,7 @@ Exit
 
 ## 15. Summary
 
-**Kestrel** is a:
+**Shortwing** is a:
 
 * Deterministic
 * Minimal

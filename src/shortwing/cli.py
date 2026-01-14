@@ -1,28 +1,28 @@
-"""Kestrel CLI - Click command definitions."""
+"""Shortwing CLI - Click command definitions."""
 
 import sys
 from typing import Optional
 
 import click
 
-from kestrel import __version__
-from kestrel.config import initialize_client, resolve_credentials
-from kestrel.core import execute_query
-from kestrel.exceptions import (
+from shortwing import __version__
+from shortwing.config import initialize_client, resolve_credentials
+from shortwing.core import execute_query
+from shortwing.exceptions import (
     EXIT_CONFIG_ERROR,
     EXIT_QUERY_ERROR,
     EXIT_SUCCESS,
     ConfigurationError,
-    KestrelError,
+    ShortwingError,
 )
-from kestrel.output import format_json
+from shortwing.output import format_json
 
 
-class KestrelGroup(click.Group):
+class ShortwingGroup(click.Group):
     """
     Custom group that handles both:
-    - kestrel "query string" (no subcommand)
-    - kestrel query "query string" (with subcommand)
+    - shortwing "query string" (no subcommand)
+    - shortwing query "query string" (with subcommand)
     """
 
     def invoke(self, ctx):
@@ -64,7 +64,7 @@ def read_query(
         if stdin_data:
             return stdin_data
 
-    # Check for query from context (set by KestrelGroup.invoke)
+    # Check for query from context (set by ShortwingGroup.invoke)
     if ctx and ctx.obj and ctx.obj.get("query_from_args"):
         return ctx.obj["query_from_args"].strip()
 
@@ -119,7 +119,7 @@ def run_query(
     except ConfigurationError as e:
         click.echo(str(e), err=True)
         sys.exit(EXIT_CONFIG_ERROR)
-    except KestrelError as e:
+    except ShortwingError as e:
         click.echo(str(e), err=True)
         sys.exit(e.exit_code)
     except click.UsageError:
@@ -160,20 +160,20 @@ def common_options(func):
     return func
 
 
-@click.group(cls=KestrelGroup, invoke_without_command=True)
-@click.version_option(version=__version__, prog_name="kestrel")
+@click.group(cls=ShortwingGroup, invoke_without_command=True)
+@click.version_option(version=__version__, prog_name="shortwing")
 @common_options
 @click.pass_context
 def main(ctx, key, endpoint, instance, compact, pretty):
     """
-    Kestrel - Lightweight CLI for Dimensions DSL queries.
+    Shortwing - Lightweight CLI for Dimensions DSL queries.
 
     Execute DSL queries via stdin or as an argument:
 
     \b
-    kestrel "search grants for \\"malaria\\" return researchers"
-    echo 'search grants for "malaria"' | kestrel
-    kestrel query "search grants"
+    shortwing "search grants for \\"malaria\\" return researchers"
+    echo 'search grants for "malaria"' | shortwing
+    shortwing query "search grants"
 
     \b
     Credentials are loaded from (in order of priority):

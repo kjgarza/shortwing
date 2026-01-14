@@ -1,1 +1,1 @@
-"""Kestrel test suite."""
+"""Shortwing test suite."""

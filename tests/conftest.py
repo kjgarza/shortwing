@@ -1,4 +1,4 @@
-"""Pytest fixtures for Kestrel tests."""
+"""Pytest fixtures for Shortwing tests."""
 
 from unittest.mock import MagicMock, patch
 
@@ -27,7 +27,7 @@ def clean_env(monkeypatch):
 @pytest.fixture
 def mock_dimcli():
     """Mock dimcli.Dsl and dimcli.login."""
-    with patch("kestrel.core.dimcli") as mock:
+    with patch("shortwing.core.dimcli") as mock:
         mock_dsl_instance = MagicMock()
         mock_dsl_instance.query.return_value.json = {
             "researchers": [{"id": "ur.123", "first_name": "Test"}],
@@ -40,7 +40,7 @@ def mock_dimcli():
 @pytest.fixture
 def mock_dimcli_error():
     """Mock dimcli to return an error response."""
-    with patch("kestrel.core.dimcli") as mock:
+    with patch("shortwing.core.dimcli") as mock:
         mock_dsl_instance = MagicMock()
         mock_dsl_instance.query.return_value.json = {
             "error": {"message": "Invalid DSL syntax", "code": 400}
@@ -61,8 +61,8 @@ def runner():
 def mock_all_dimcli():
     """Mock all dimcli interactions for CLI tests."""
     with (
-        patch("kestrel.config.dimcli") as config_mock,
-        patch("kestrel.core.dimcli") as core_mock,
+        patch("shortwing.config.dimcli") as config_mock,
+        patch("shortwing.core.dimcli") as core_mock,
     ):
         mock_dsl_instance = MagicMock()
         mock_dsl_instance.query.return_value.json = {

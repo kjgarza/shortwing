@@ -6,7 +6,7 @@ from typing import Optional
 
 import dimcli
 
-from kestrel.exceptions import ConfigurationError
+from shortwing.exceptions import ConfigurationError
 
 DEFAULT_ENDPOINT = "https://app.dimensions.ai/api/dsl/v2"
 USER_CONFIG_FILE_PATH = os.path.expanduser("~/.dimensions/dsl.ini")

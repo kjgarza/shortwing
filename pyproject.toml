@@ -1,5 +1,5 @@
 [project]
-name = "kestrel"
+name = "shortwing"
 version = "0.1.0"
 description = "Lightweight CLI wrapper for Dimensions DSL queries via dimcli"
 readme = "README.md"
@@ -25,14 +25,14 @@ dependencies = [
 ]
 
 [project.scripts]
-kestrel = "kestrel.cli:main"
+shortwing = "shortwing.cli:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/kestrel"]
+packages = ["src/shortwing"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

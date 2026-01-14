@@ -2,8 +2,8 @@
 
 import pytest
 
-from kestrel.config import DEFAULT_ENDPOINT, read_dsl_ini, resolve_credentials
-from kestrel.exceptions import ConfigurationError
+from shortwing.config import DEFAULT_ENDPOINT, read_dsl_ini, resolve_credentials
+from shortwing.exceptions import ConfigurationError
 
 
 class TestResolveCredentials:

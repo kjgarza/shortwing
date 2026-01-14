@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kestrel.cli import main
-from kestrel.exceptions import EXIT_CONFIG_ERROR, EXIT_QUERY_ERROR, EXIT_SUCCESS
+from shortwing.cli import main
+from shortwing.exceptions import EXIT_CONFIG_ERROR, EXIT_QUERY_ERROR, EXIT_SUCCESS
 
 
 class TestCLIHelp:
@@ -15,13 +15,13 @@ class TestCLIHelp:
         """--help should show usage information."""
         result = runner.invoke(main, ["--help"])
         assert result.exit_code == 0
-        assert "Kestrel" in result.output
+        assert "Shortwing" in result.output
 
     def test_version_option(self, runner):
         """--version should show version."""
         result = runner.invoke(main, ["--version"])
         assert result.exit_code == 0
-        assert "kestrel" in result.output
+        assert "shortwing" in result.output
 
 
 class TestCLIInput:
@@ -74,8 +74,8 @@ class TestCLIAuth:
     def test_key_flag_overrides_env(self, runner):
         """--key flag should override environment variable."""
         with (
-            patch("kestrel.config.dimcli") as config_mock,
-            patch("kestrel.core.dimcli") as core_mock,
+            patch("shortwing.config.dimcli") as config_mock,
+            patch("shortwing.core.dimcli") as core_mock,
         ):
             mock_dsl = MagicMock()
             mock_dsl.query.return_value.json = {"test": "data"}
@@ -116,14 +116,14 @@ class TestCLISubcommand:
     """Tests for query subcommand."""
 
     def test_query_subcommand_works(self, runner, mock_all_dimcli):
-        """'kestrel query' subcommand should work."""
+        """'shortwing query' subcommand should work."""
         result = runner.invoke(
             main, ["query", "search grants"], env={"DIMENSIONS_KEY": "test-key"}
         )
         assert result.exit_code == EXIT_SUCCESS
 
     def test_query_subcommand_with_options(self, runner, mock_all_dimcli):
-        """'kestrel query --compact' should work."""
+        """'shortwing query --compact' should work."""
         result = runner.invoke(
             main,
             ["query", "--compact", "search grants"],
@@ -140,8 +140,8 @@ class TestCLIErrors:
     def test_api_error_exits_code_1(self, runner):
         """API error should exit with code 1 and output error JSON."""
         with (
-            patch("kestrel.config.dimcli"),
-            patch("kestrel.core.dimcli") as core_mock,
+            patch("shortwing.config.dimcli"),
+            patch("shortwing.core.dimcli") as core_mock,
         ):
             mock_dsl = MagicMock()
             mock_dsl.query.return_value.json = {

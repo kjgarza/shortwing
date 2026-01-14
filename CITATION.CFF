@@ -6,11 +6,11 @@ authors:
     email: kj.garza@gmail.com
     orcid: https://orcid.org/0000-0003-3484-6875
     affiliation: 
-title: Kestrel A Lightweight CLI Wrapper for Dimensions DSL Queries Using dimcli
+title: Shortwing A Lightweight CLI Wrapper for Dimensions DSL Queries Using dimcli
 version: 1.0.0
 doi: https://doi.org/
 license: CC-BY-NC-ND-4.0
-url: https://github.com/kjgarza/kestrel
+url: https://github.com/kjgarza/shortwing
 date-released: 10-01-2026
 keywords: 
   - Dimensions

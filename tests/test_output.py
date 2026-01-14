@@ -1,6 +1,6 @@
 """Tests for output formatting module."""
 
-from kestrel.output import format_json
+from shortwing.output import format_json
 
 
 class TestFormatJson:
