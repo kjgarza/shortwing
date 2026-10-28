@@ -38,7 +38,8 @@ class ShortwingGroup(click.Group):
             first_arg = remaining_args[0]
             # Only treat as query if:
             # 1. It's not a known command AND
-            # 2. It doesn't start with '-' (which would be an option for a subcommand)
+            # 2. It doesn't start with '-' (which would be an option for a subcommand),
+            #    except a bare '-', which means "read the query from stdin"
             if first_arg not in self.commands and (
                 first_arg == "-" or not first_arg.startswith("-")
             ):
@@ -170,8 +171,8 @@ async def run_query_async(
         click.echo(str(e), err=True)
         show_next_steps(EXIT_QUERY_ERROR, False)
         sys.exit(e.exit_code)
-    except click.UsageError:
-        raise  # Let click handle usage errors
+    except (click.UsageError, click.exceptions.Exit, click.Abort):
+        raise  # Let click handle usage errors and ctx.exit()
     except Exception as e:
         click.echo(f"Unexpected error: {e}", err=True)
         show_next_steps(EXIT_QUERY_ERROR, False)
