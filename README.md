@@ -22,14 +22,18 @@ pip install shortwing
 # Query as argument
 shortwing "search grants for \"malaria\" return researchers"
 
-# Query from stdin
+# Query from stdin (read only when no query argument is given;
+# "-" requests stdin explicitly)
 echo 'search grants for "malaria"' | shortwing
+echo 'search grants for "malaria"' | shortwing -
+# (on an interactive terminal, "shortwing -" waits for input until Ctrl-D)
 
 # With subcommand
 shortwing query "search grants return grants"
 
-# Compact JSON output
+# Compact JSON output (options go before the query)
 shortwing --compact "search grants"
+echo 'search grants' | shortwing --compact -
 
 # Use a specific instance from dsl.ini
 shortwing --instance test "search grants"

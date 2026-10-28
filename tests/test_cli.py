@@ -1,5 +1,9 @@
 """CLI integration tests."""
 
+import os
+import socket
+import subprocess
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -41,19 +45,78 @@ class TestCLIInput:
         )
         assert result.exit_code == EXIT_SUCCESS
 
-    def test_stdin_takes_precedence(self, runner, mock_all_dimcli):
-        """Stdin should take precedence over argument."""
+    def test_argument_takes_precedence(self, runner, mock_all_dimcli):
+        """Argument should take precedence over stdin."""
         result = runner.invoke(
             main,
             ["argument query"],
             input="stdin query\n",
             env={"DIMENSIONS_KEY": "test-key"},
         )
-        # Verify query endpoint was called with stdin query
+        assert result.exit_code == EXIT_SUCCESS
+        calls = mock_all_dimcli.post.call_args_list
+        query_call = [c for c in calls if "/api/dsl" in str(c)]
+        assert len(query_call) > 0
+        assert query_call[0][1]["content"] == b"argument query"
+
+    @pytest.mark.parametrize("args", [["-"], ["query", "-"]])
+    def test_dash_reads_stdin(self, runner, mock_all_dimcli, args):
+        """'-' as the query should read from stdin."""
+        result = runner.invoke(
+            main, args, input="stdin query\n", env={"DIMENSIONS_KEY": "test-key"}
+        )
+        assert result.exit_code == EXIT_SUCCESS
         calls = mock_all_dimcli.post.call_args_list
         query_call = [c for c in calls if "/api/dsl" in str(c)]
         assert len(query_call) > 0
         assert query_call[0][1]["content"] == b"stdin query"
+
+    @pytest.mark.parametrize("args", [["search grants"], ["query", "search grants"]])
+    def test_argument_with_open_stdin_pipe_does_not_hang(self, args, tmp_path):
+        """An open non-TTY stdin that never reaches EOF must not block (issue #2)."""
+        # Bind and release an ephemeral port so connecting to it is refused at once
+        with socket.socket() as sock:
+            sock.bind(("127.0.0.1", 0))
+            port = sock.getsockname()[1]
+        env = {
+            k: v
+            for k, v in os.environ.items()
+            if not k.upper().endswith("_PROXY") and not k.startswith("DIMENSIONS_")
+        }
+        env.update(
+            HOME=str(tmp_path),
+            NO_PROXY="127.0.0.1",
+            DIMENSIONS_KEY="test-key",
+            DIMENSIONS_ENDPOINT=f"http://127.0.0.1:{port}",
+        )
+        read_fd, write_fd = os.pipe()
+        try:
+            result = subprocess.run(
+                [sys.executable, "-m", "shortwing.cli", *args],
+                stdin=read_fd,
+                capture_output=True,
+                timeout=15,
+                cwd=tmp_path,
+                env=env,
+            )
+        finally:
+            os.close(read_fd)
+            os.close(write_fd)
+        # Reaching here without TimeoutExpired is the assertion; the refused
+        # connection makes the query itself fail.
+        assert result.returncode == EXIT_QUERY_ERROR, result.stderr.decode()
+
+    @pytest.mark.parametrize(
+        "args, stdin", [(["-"], ""), (["query", "-"], ""), (["   "], "")]
+    )
+    def test_no_query_shows_help_and_exits_0(self, runner, mock_all_dimcli, args, stdin):
+        """With no usable query, help is shown and ctx.exit(0) is not reported as an error."""
+        result = runner.invoke(
+            main, args, input=stdin, env={"DIMENSIONS_KEY": "test-key"}
+        )
+        assert result.exit_code == EXIT_SUCCESS, result.output
+        assert "Usage:" in result.output
+        assert "Unexpected error" not in result.output
 
     def test_whitespace_trimmed(self, runner, mock_all_dimcli):
         """Leading/trailing whitespace should be trimmed."""

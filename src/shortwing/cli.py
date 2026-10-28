@@ -38,8 +38,11 @@ class ShortwingGroup(click.Group):
             first_arg = remaining_args[0]
             # Only treat as query if:
             # 1. It's not a known command AND
-            # 2. It doesn't start with '-' (which would be an option for a subcommand)
-            if first_arg not in self.commands and not first_arg.startswith("-"):
+            # 2. It doesn't start with '-' (which would be an option for a subcommand),
+            #    except a bare '-', which means "read the query from stdin"
+            if first_arg not in self.commands and (
+                first_arg == "-" or not first_arg.startswith("-")
+            ):
                 # Not a command and not an option, treat all remaining args as query
                 ctx.ensure_object(dict)
                 ctx.obj["query_from_args"] = " ".join(remaining_args)
@@ -55,23 +58,22 @@ def read_query(
     query_arg: Optional[str], ctx: Optional[click.Context] = None
 ) -> Optional[str]:
     """
-    Read query from stdin (if piped), context, or from argument.
+    Read query from argument, context, or stdin.
 
-    Stdin takes precedence over argument.
+    An argument takes precedence; stdin is read only when no argument is
+    given (or the argument is "-") and stdin is not a TTY. Reading stdin
+    first would block forever on an open pipe that never reaches EOF.
     """
-    # Check if stdin has data (is piped)
-    if not sys.stdin.isatty():
+    # Query from context (set by ShortwingGroup.invoke) or positional argument
+    query = (ctx.obj.get("query_from_args") if ctx and ctx.obj else None) or query_arg
+    if query and query.strip() != "-":
+        return query.strip()
+
+    # Fall back to stdin if piped, or if explicitly requested with "-"
+    if query or not sys.stdin.isatty():
         stdin_data = sys.stdin.read().strip()
         if stdin_data:
             return stdin_data
-
-    # Check for query from context (set by ShortwingGroup.invoke)
-    if ctx and ctx.obj and ctx.obj.get("query_from_args"):
-        return ctx.obj["query_from_args"].strip()
-
-    # Fall back to positional argument
-    if query_arg:
-        return query_arg.strip()
 
     return None
 
@@ -169,8 +171,8 @@ async def run_query_async(
         click.echo(str(e), err=True)
         show_next_steps(EXIT_QUERY_ERROR, False)
         sys.exit(e.exit_code)
-    except click.UsageError:
-        raise  # Let click handle usage errors
+    except (click.UsageError, click.exceptions.Exit, click.Abort):
+        raise  # Let click handle usage errors and ctx.exit()
     except Exception as e:
         click.echo(f"Unexpected error: {e}", err=True)
         show_next_steps(EXIT_QUERY_ERROR, False)
@@ -229,6 +231,7 @@ def main(ctx, key, endpoint, instance, compact, pretty):
     \b
     shortwing "search grants for \\"malaria\\" return researchers"
     echo 'search grants for "malaria"' | shortwing
+    echo 'search grants' | shortwing -
     shortwing query "search grants"
 
     \b
@@ -259,7 +262,7 @@ def query_cmd(query, key, endpoint, instance, compact, pretty):
     Execute a DSL query.
 
     Query can be provided as argument or piped via stdin.
-    Stdin takes precedence if both are provided.
+    An argument takes precedence; pass "-" to read from stdin explicitly.
     """
     # If no query arg and no stdin, show help
     if not query and sys.stdin.isatty():
