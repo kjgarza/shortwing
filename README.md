@@ -22,8 +22,10 @@ pip install shortwing
 # Query as argument
 shortwing "search grants for \"malaria\" return researchers"
 
-# Query from stdin
+# Query from stdin (read only when no query argument is given;
+# "-" requests stdin explicitly)
 echo 'search grants for "malaria"' | shortwing
+echo 'search grants for "malaria"' | shortwing -
 
 # With subcommand
 shortwing query "search grants return grants"
