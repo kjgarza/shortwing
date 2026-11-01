@@ -1,6 +1,6 @@
 [project]
 name = "shortwing"
-version = "0.2.1"
+version = "0.2.2"
 description = "Lightweight async CLI for Dimensions DSL queries"
 readme = "README.md"
 license = { text = "MIT" }
